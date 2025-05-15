@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Mood Journal</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="loginContainer" class="login-container">
+    <h2>Login</h2>
+    <form id="loginForm">
+      <input
+        type="text"
+        id="username"
+        placeholder="Username"
+        required
+        autocomplete="username"
+      />
+      <input
+        type="password"
+        id="password"
+        placeholder="Password"
+        required
+        autocomplete="current-password"
+      />
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <div id="mainContainer" class="main-container hidden">
+    <h1>How Are You Feeling Today?</h1>
+    <p>Select your mood & write something about it.</p>
+    <div class="emoji-grid">
+      <div class="emoji" data-mood="Happy">😀<span>Happy</span></div>
+      <div class="emoji" data-mood="Sad">😢<span>Sad</span></div>
+      <div class="emoji" data-mood="Angry">😡<span>Angry</span></div>
+      <div class="emoji" data-mood="Calm">😇<span>Calm</span></div>
+      <div class="emoji" data-mood="Joyful">😊<span>Joyful</span></div>
+    </div>
+    <div id="selectedMoodText"></div>
+    <textarea id="moodNote" placeholder="Write about your feeling..."></textarea>
+    <button id="submitMood">Save Mood</button>
+    <button id="viewHistory">📅 Monthly Review</button>
+
+    <div id="doctorSupport" class="doctor-support hidden">
+      <h3>Need Support?</h3>
+      <p>If you're feeling down often, consider reaching out for help:</p>
+      <ul class="doctor-list">
+        <li>
+          <strong>Dr. Rahim Uddin</strong>
+          <a href="tel:+8801712345678" class="doctor-contact">Call</a>
+          <a href="mailto:rahim@example.com" class="doctor-contact">Email</a>
+        </li>
+        <li>
+          <strong>Dr. Farida Khatun</strong>
+          <a href="tel:+8801912345678" class="doctor-contact">Call</a>
+          <a href="mailto:farida@example.com" class="doctor-contact">Email</a>
+        </li>
+        <li>
+          <strong>Dr. Sajid Ahmed</strong>
+          <a href="tel:+8801812345678" class="doctor-contact">Call</a>
+          <a href="mailto:sajid@example.com" class="doctor-contact">Email</a>
+        </li>
+      </ul>
+      <a
+        href="https://www.doctorbangladesh.com/"
+        target="_blank"
+        class="doctor-link"
+        >Visit Doctor Bangladesh</a
+      >
+    </div>
+
+    <div id="historySection" class="hidden">
+      <h2>📋 Your Mood History</h2>
+      <ul id="historyList"></ul>
+      <h3>📊 Monthly Mood Chart</h3>
+      <canvas id="moodChart" width="400" height="200"></canvas>
+    </div>
+  </div>
+
+  <footer>&copy; 2025 All rights reserved. Made by Promod & Chinmoy</footer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const validUsername = "admin";
+      const validPassword = "1234";
+
+      const loginForm = document.getElementById("loginForm");
+      const mainContainer = document.getElementById("mainContainer");
+      const loginContainer = document.getElementById("loginContainer");
+      const doctorSupport = document.getElementById("doctorSupport");
+
+      const emojiElements = document.querySelectorAll(".emoji");
+      const selectedMoodText = document.getElementById("selectedMoodText");
+      const moodNote = document.getElementById("moodNote");
+      const submitMoodBtn = document.getElementById("submitMood");
+      const viewHistoryBtn = document.getElementById("viewHistory");
+      const historySection = document.getElementById("historySection");
+      const historyList = document.getElementById("historyList");
+      const moodChartCtx = document.getElementById("moodChart").getContext("2d");
+
+      let selectedMood = null;
+      let moodHistory = [];
+
+      // Login Handling
+      loginForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (username === validUsername && password === validPassword) {
+          alert("Login Successful!");
+          loginContainer.classList.add("hidden");
+          mainContainer.classList.remove("hidden");
+          doctorSupport.classList.remove("hidden");
+        } else {
+          alert("Invalid username or password");
+        }
+      });
+
+      // Select Mood
+      emojiElements.forEach((emoji) => {
+        emoji.addEventListener("click", () => {
+          emojiElements.forEach((e) => e.classList.remove("selected"));
+          emoji.classList.add("selected");
+          selectedMood = emoji.getAttribute("data-mood");
+          selectedMoodText.textContent = `You selected: ${selectedMood}`;
+        });
+      });
+
+      // Save Mood
+      submitMoodBtn.addEventListener("click", () => {
+        if (!selectedMood) {
+          alert("Please select a mood first.");
+          return;
+        }
+        const note = moodNote.value.trim();
+        const entry = {
+          mood: selectedMood,
+          note: note,
+          date: new Date().toLocaleDateString(),
+        };
+        moodHistory.push(entry);
+        alert("Mood saved!");
+
+        // Reset inputs
+        selectedMoodText.textContent = "";
+        moodNote.value = "";
+        emojiElements.forEach((e) => e.classList.remove("selected"));
+        selectedMood = null;
+      });
+
+      // View History
+      viewHistoryBtn.addEventListener("click", () => {
+        if (moodHistory.length === 0) {
+          alert("No mood history yet.");
+          return;
+        }
+        historyList.innerHTML = "";
+        moodHistory.forEach((entry) => {
+          const li = document.createElement("li");
+          li.textContent = `${entry.date} - ${entry.mood}: ${entry.note}`;
+          historyList.appendChild(li);
+        });
+        historySection.classList.toggle("hidden");
+        if (!historySection.classList.contains("hidden")) {
+          renderMoodChart();
+        }
+      });
+
+      // Render Chart
+      function renderMoodChart() {
+        const moodCounts = {};
+        moodHistory.forEach((entry) => {
+          moodCounts[entry.mood] = (moodCounts[entry.mood] || 0) + 1;
+        });
+
+        const labels = Object.keys(moodCounts);
+        const data = Object.values(moodCounts);
+
+        if (window.moodChartInstance) {
+          window.moodChartInstance.destroy();
+        }
+
+        window.moodChartInstance = new Chart(moodChartCtx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Mood Counts",
+                data: data,
+                backgroundColor: "#feda6a",
+                borderColor: "#b88f00",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                precision: 0,
+              },
+            },
+          },
+        });
+      }
+    });
+  </script>
+</body>
+</html>
